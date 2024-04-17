@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -80,7 +81,8 @@ public class App {
 
         @Override
         public Path getDestinationFolder() {
-            return this.destinationFolder != null ? this.destinationFolder : this.source.toAbsolutePath().getParent();
+            return this.destinationFolder != null ?
+                    this.destinationFolder : useSourcePathAsDestinationFolder();
         }
 
         @Override
@@ -97,7 +99,19 @@ public class App {
             }
             return unmodifiableList(entityTypes);
         }
+
+        private Path useSourcePathAsDestinationFolder() {
+            final String fileName = this.source.getFileName().toString();
+            int pos = fileName.lastIndexOf('.');
+            if (pos > -1) {
+                return Paths.get(this.source.toAbsolutePath().getParent().toString(), fileName.substring(0, pos));
+            }
+            else {
+                return this.source.toAbsolutePath().getParent();
+            }
+        }
     }
+
 
 
     private static class MultiEntitySinkObserver implements MultiEntitySink.Observer {

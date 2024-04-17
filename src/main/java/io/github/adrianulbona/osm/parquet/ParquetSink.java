@@ -8,6 +8,7 @@ import org.openstreetmap.osmosis.core.task.v0_6.Sink;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,7 +29,8 @@ public class ParquetSink<T extends Entity> implements Sink {
 
     public ParquetSink(Path source, Path destinationFolder, boolean excludeMetadata, EntityType entityType) {
         this.source = source;
-        this.destinationFolder = destinationFolder;
+        this.destinationFolder = Paths.get(destinationFolder.toAbsolutePath().toString(),
+                entityType.toString().toLowerCase());
         this.excludeMetadata = excludeMetadata;
         this.entityType = entityType;
         this.filters = new ArrayList<>();
