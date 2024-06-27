@@ -22,44 +22,31 @@ public class MultiEntitySink implements Sink {
 
     private final List<ParquetSink<Entity>> converters;
 
-    private final List<Observer> observers;
-
     public MultiEntitySink(Config config) {
         final List<EntityType> entityTypes = config.entitiesToBeParquetized();
         this.converters = entityTypes.stream().map(type -> new ParquetSink<>(config.getSource(),
                 config.getDestinationFolder(), config.getExcludeMetadata(), type)).collect(toList());
-        this.observers = new ArrayList<>();
     }
 
     @Override
     public void process(EntityContainer entityContainer) {
         this.converters.forEach(converter -> converter.process(entityContainer));
-        this.observers.forEach(o -> o.processed(entityContainer.getEntity()));
+
     }
 
     @Override
     public void initialize(Map<String, Object> metaData) {
         this.converters.forEach(converter -> converter.initialize(metaData));
-        this.observers.forEach(Observer::started);
     }
 
     @Override
     public void complete() {
         this.converters.forEach(Completable::complete);
-        this.observers.forEach(Observer::ended);
     }
 
     @Override
     public void close() {
         this.converters.forEach(Closeable::close);
-    }
-
-    public void addObserver(Observer observer) {
-        this.observers.add(observer);
-    }
-
-    public void removeObserver(Observer observer) {
-        this.observers.remove(observer);
     }
 
     public interface Observer {
@@ -70,7 +57,6 @@ public class MultiEntitySink implements Sink {
 
         void ended();
     }
-
 
     public interface Config {
 

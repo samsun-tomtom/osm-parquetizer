@@ -1,10 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>io.github.adrianulbona</groupId>
+    <groupId>com.tomtom</groupId>
     <artifactId>osm-parquetizer</artifactId>
     <packaging>jar</packaging>
-    <version>1.0.1-SNAPSHOT</version>
+    <version>2.1.0</version>
     <name>OSM Parquetizer</name>
     <url>http://maven.apache.org</url>
     <properties>
@@ -98,4 +98,14 @@
             </plugin>
         </plugins>
     </build>
+    <distributionManagement>
+        <repository>
+            <id>del-pc-maven-releases</id>
+            <url>https://artifactory.tomtomgroup.com/artifactory/del-pc-maven-release</url>
+        </repository>
+        <snapshotRepository>
+            <id>del-pc-maven-snapshots</id>
+            <url>https://artifactory.tomtomgroup.com/artifactory/del-pc-maven-snapshot</url>
+        </snapshotRepository>
+    </distributionManagement>
 </project>

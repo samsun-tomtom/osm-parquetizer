@@ -10,11 +10,12 @@ import org.openstreetmap.osmosis.pbf2.v0_6.PbfReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.util.Collections.unmodifiableList;
@@ -27,21 +28,43 @@ import static org.openstreetmap.osmosis.core.domain.v0_6.EntityType.Relation;
  */
 public class App {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         final MultiEntitySinkConfig config = new MultiEntitySinkConfig();
         final CmdLineParser cmdLineParser = new CmdLineParser(config);
         try {
+            ExecutorService executor = Executors.newFixedThreadPool(3);
             cmdLineParser.parseArgument(args);
-            final PbfReader reader = new PbfReader(config.getSource().toFile(), config.threads);
-            final MultiEntitySink sink = new MultiEntitySink(config);
-            sink.addObserver(new MultiEntitySinkObserver());
-            reader.setSink(sink);
-            reader.run();
+            final PbfReader nodeReader = new PbfReader(config.getSource().toFile(), config.threads);
+            final PbfReader wayReader = new PbfReader(config.getSource().toFile(), config.threads);
+            final PbfReader relationReader = new PbfReader(config.getSource().toFile(), config.threads);
+            final ParquetSink<Entity> nodeSink = new ParquetSink<>(
+                    config.getSource(),
+                    config.getDestinationFolder(),
+                    config.getExcludeMetadata(), Node);
+            final ParquetSink<Entity> waySink = new ParquetSink<>(
+                    config.getSource(),
+                    config.getDestinationFolder(),
+                    config.getExcludeMetadata(),
+                    EntityType.Way);
+            final ParquetSink<Entity> relationSink = new ParquetSink<>(
+                    config.getSource(),
+                    config.getDestinationFolder(),
+                    config.getExcludeMetadata(),
+                    Relation);
+            nodeSink.addObserver(new EntitySinkObserver(Node));
+            waySink.addObserver(new EntitySinkObserver(EntityType.Way));
+            relationSink.addObserver(new EntitySinkObserver(Relation));
+            nodeReader.setSink(nodeSink);
+            wayReader.setSink(waySink);
+            relationReader.setSink(relationSink);
+            executor.submit(nodeReader);
+            executor.submit(wayReader);
+            executor.submit(relationReader);
+            executor.shutdown();
         } catch (CmdLineException e) {
             System.out.println(e.getMessage());
             System.out.print("Usage: java -jar osm-parquetizer.jar");
             System.out.println();
-            cmdLineParser.printSingleLineUsage(System.out);
         }
     }
 
@@ -112,31 +135,43 @@ public class App {
         }
     }
 
+    private static class EntitySinkObserver implements ParquetSink.Observer {
 
+        private static final Logger LOGGER = LoggerFactory.getLogger(EntitySinkObserver.class);
+        private final AtomicLong totalEntitiesCount;
+        private final EntityType type;
 
-    private static class MultiEntitySinkObserver implements MultiEntitySink.Observer {
-
-        private static final Logger LOGGER = LoggerFactory.getLogger(MultiEntitySinkObserver.class);
-
-        private AtomicLong totalEntitiesCount;
-
-        @Override
-        public void started() {
+        EntitySinkObserver(final EntityType type) {
+            this.type = type;
             totalEntitiesCount = new AtomicLong();
         }
 
         @Override
-        public void processed(Entity entity) {
-            final long count = totalEntitiesCount.incrementAndGet();
-            if (count % 1000000 == 0) {
-                LOGGER.info("Entities processed: " + count);
+        public void started() {}
 
+        @Override
+        public void processed(Entity entity) {
+
+            if (entity.getType().equals(this.type)) {
+                final long count = totalEntitiesCount.incrementAndGet();
+                if (count % 100000 == 0) {
+                    final String message = String.format("%s Entities processed: %d", this.type, count);
+                    LOGGER.info(message);
+                }
             }
         }
 
         @Override
         public void ended() {
-            LOGGER.info("Total entities processed: " + totalEntitiesCount.get());
+
+            final String message = String.format("Total %s entities processed: %d", this.type,
+                    totalEntitiesCount.get());
+            LOGGER.info(message);
+        }
+
+        @Override
+        public EntityType getType() {
+            return null;
         }
     }
 }

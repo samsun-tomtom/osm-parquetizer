@@ -57,7 +57,7 @@ public class ParquetWriterFactory {
         }
 
         public static ParquetWriter<Way> standard(String destination, boolean excludeMetadata) throws IOException {
-            return new WaysWriterBuilder(new Path(destination), excludeMetadata).self().withRowGroupSize(67108864)
+            return new WaysWriterBuilder(new Path(destination), excludeMetadata).self().withRowGroupSize(16777216)
                     .withCompressionCodec(COMPRESSION).withWriteMode(OVERWRITE).build();
         }
     }
@@ -83,7 +83,7 @@ public class ParquetWriterFactory {
         }
 
         public static ParquetWriter<Node> standard(String destination, boolean excludeMetadata) throws IOException {
-            return new NodesWriterBuilder(new Path(destination), excludeMetadata).self().withRowGroupSize(67108864)
+            return new NodesWriterBuilder(new Path(destination), excludeMetadata).self().withRowGroupSize(16777216)
                     .withCompressionCodec(COMPRESSION).withWriteMode(OVERWRITE).build();
         }
     }
@@ -109,7 +109,7 @@ public class ParquetWriterFactory {
         }
 
         public static ParquetWriter<Relation> standard(String destination, boolean excludeMetadata) throws IOException {
-            return new RelationsWriterBuilder(new Path(destination), excludeMetadata).self().withRowGroupSize(67108864)
+            return new RelationsWriterBuilder(new Path(destination), excludeMetadata).self().withRowGroupSize(16777216)
                     .withCompressionCodec(COMPRESSION).withWriteMode(OVERWRITE).build();
         }
     }

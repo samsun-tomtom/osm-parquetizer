@@ -25,6 +25,8 @@ public class ParquetSink<T extends Entity> implements Sink {
     private final EntityType entityType;
     private final List<Predicate<T>> filters;
 
+    private final List<ParquetSink.Observer> observers;
+
     private ParquetWriter<T> writer;
 
     public ParquetSink(Path source, Path destinationFolder, boolean excludeMetadata, EntityType entityType) {
@@ -34,6 +36,7 @@ public class ParquetSink<T extends Entity> implements Sink {
         this.excludeMetadata = excludeMetadata;
         this.entityType = entityType;
         this.filters = new ArrayList<>();
+        this.observers = new ArrayList<>();
     }
 
     @Override
@@ -47,6 +50,7 @@ public class ParquetSink<T extends Entity> implements Sink {
         } catch (IOException e) {
             throw new RuntimeException("Unable to build writers", e);
         }
+        this.observers.forEach(ParquetSink.Observer::started);
     }
 
     @Override
@@ -56,6 +60,7 @@ public class ParquetSink<T extends Entity> implements Sink {
                 final T entity = (T) entityContainer.getEntity();
                 if (filters.stream().noneMatch(filter -> filter.test(entity))) {
                     writer.write(entity);
+                    this.observers.forEach(o -> o.processed(entity));
                 }
             }
         } catch (IOException e) {
@@ -70,11 +75,20 @@ public class ParquetSink<T extends Entity> implements Sink {
         } catch (IOException e) {
             throw new RuntimeException("Unable to close writers", e);
         }
+        this.observers.forEach(ParquetSink.Observer::ended);
     }
 
     @Override
     public void close() {
 
+    }
+
+    public void addObserver(final ParquetSink.Observer observer) {
+        this.observers.add(observer);
+    }
+
+    public void removeObserver(final ParquetSink.Observer observer) {
+        this.observers.remove(observer);
     }
 
     public void addFilter(Predicate<T> predicate) {
@@ -83,5 +97,16 @@ public class ParquetSink<T extends Entity> implements Sink {
 
     public void removeFilter(Predicate<T> predicate) {
         this.filters.remove(predicate);
+    }
+
+    public interface Observer {
+
+        void started();
+
+        void processed(Entity entity);
+
+        void ended();
+
+        EntityType getType();
     }
 }
